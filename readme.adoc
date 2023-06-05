@@ -1,0 +1,44 @@
+= Classification of Spoken Digits
+:last-update-label!:
+Jaroslav Langer
+
+Classification of spoken digits using recurrent neural networks.
+
+.TODO
+[%collapsible]
+====
+. http://www.timeseriesclassification.com/description.php?Dataset=SpokenArabicDigits
+. https://en.wikipedia.org/wiki/Emphasis_(telecommunications)
+. https://speechprocessingbook.aalto.fi/Preprocessing/Pre-emphasis.html
+. bidirectional
+. more layers
+. activation functions
+. https://pytorch.org/docs/stable/data.html#torch.utils.data.TensorDataset
+. https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
+. https://discuss.pytorch.org/t/the-difference-and-use-of-output-and-hidden-state-of-an-rnn/15108/4
+. https://discuss.pytorch.org/t/rnn-many-to-one/55125
+. https://pytorch.org/docs/stable/generated/torch.nn.Dropout.html
+. https://pytorch.org/docs/stable/optim.html
+. https://pytorch.org/docs/stable/generated/torch.optim.SGD.html
+. https://pytorch.org/docs/stable/generated/torch.optim.Adam.html
+. https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
+. https://pytorch.org/audio/stable/tutorials/speech_recognition_pipeline_tutorial.html
+. https://pytorch.org/tutorials/intermediate/char_rnn_classification_tutorial.html
+. https://pytorch.org/tutorials/beginner/introyt/trainingyt.html
+. https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html
+. https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
+. https://charlieoneill.medium.com/predicting-the-price-of-bitcoin-with-multivariate-pytorch-lstms-695bc294130
+. https://medium.com/mlearning-ai/multivariate-time-series-forecasting-using-rnn-lstm-8d840f3f9aa7
+. https://towardsdatascience.com/building-rnn-lstm-and-gru-for-time-series-using-pytorch-a46e5b094e7b
+====
+
+The project works with two datasets::
+
+. https://github.com/Jakobovski/free-spoken-digit-dataset[Free Spoken Digit Dataset (FSDD)]
+. https://archive.ics.uci.edu/ml/datasets/Spoken+Arabic+Digit[Spoken Arabic Digit Data Set]
+
+The source code is in link:code.ipynb[jupyter-notebook] exported from Google Colaboratory::
+
+* The current colab's environment is listed link:requirements.txt[here].
+
+*Summary report is link:report.pdf[here]*.

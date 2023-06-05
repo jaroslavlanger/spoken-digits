@@ -1,0 +1,317 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{verbatim}
+\usepackage{hyperref}
+\hypersetup{
+     colorlinks=true, % Otherwise the links are in color boxes.
+     linkcolor=black, % E.g. hyperlinks in table of contents.
+     citecolor=black,
+     urlcolor=blue, % Classical blue web links.
+     }
+
+\title{Classification of Spoken Digits \\
+       \vspace{0.05cm}
+       \Large{Using Recurrent Neural Networks} \\
+       \vspace{0.2cm}
+       \normalsize{\href{https://github.com/jaroslavlanger/spoken-digits}{github.com/jaroslavlanger/spoken-digits}}
+}
+\date{\today}
+\author{Jaroslav Langer / langeja5@fit.cvut.cz / FIT, CTU, Prague}
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+This project classifies spoken digits in two languages English and Arabic.
+The classifiers are recurrent neural networks.
+One type contains vanilla RNN layers and the other type has LSTM cells.
+The sound features are not fed as is.
+They are pre-emphasized a converted into MFCC coefficients and padded to the length of longest one.
+The best model found for English digit classification worked even better when trained for classification of Arabic spoken digits.
+Final test accuracies were 0.72 and 0.92 respectively.
+
+\textbf{Keywords}: Multi-class classification, Spoken digits, MFCC, RNN, LSTM.
+\end{abstract}
+
+\section{Introduction}
+
+MNIST dataset is one of the most recognized datasets of all time.
+For some time, it is considered to be solved.
+However it still serves the purpose of a difficulty benchmark.
+Using it, we can explore something about the inherent properties of such task.
+We can ask questions such as: "Can I solve MNIST with only 10 neurons?"
+or "Is one convolutional layer enough to solve it?".
+
+This project explore very similar datasets both consisting of recordings of spoken digits.
+The exploration of hyper-parameters takes place with the \href{https://github.com/Jakobovski/free-spoken-digit-dataset}{English language dataset}.
+The \href{https://archive.ics.uci.edu/ml/datasets/Spoken+Arabic+Digit}{Arabic counterpart} is used to validate, whether the findings are specific to the English dataset.
+Or whether the observations are somewhat general to the task of spoken digit classification in disregard of the language.
+
+\section{Data}
+
+The \href{https://archive.ics.uci.edu/ml/datasets/Spoken+Arabic+Digit}{Spoken Arabic Digit Data Set}
+consists of 8,800 samples ($10 \textrm{ digits} \times 10 \textrm{ repetitions} \times (44 \textrm{ males} + 44 \textrm{ females})$).
+The data are preprocessed first with pre-emphasized filter ($1-0.97Z^{(-1)}$).
+Then the sound is converted to the 13 most significant Mel Frequency Cepstral Coefficients (MFCCs).
+
+English \href{https://github.com/Jakobovski/free-spoken-digit-dataset}{Free Spoken Digit Dataset (FSDD)}
+is in the .wav sound format. There are 3,000 recordings ($10 \textrm{ digits} \times 50 \textrm{ repetitions} \times 6 \textrm{ speakers}$).
+In order to keep the conditions similar as possible,
+I preprocessed it in the same way as the Arabic dataset.
+
+\section{Data Split}
+
+As the English version has only 6 speakers I do not aim to estimate well the test classification accuracy.
+I must split the data by speakers.
+Because otherwise I believe the classification would be about remembering the speaker's digits, not about the digit recognition.
+Then having only 6 speakers means, I can use something like 3 for training, 2 for validation and 1 for test split.
+So this is what I did.
+Also speaker Theo is much more quite than others and Yweweler has (subjectively speaking) heavier accent.
+So I controlled these two to not be in the split together.
+There is a definitely room to focus more on the preprocessing, I will keep it for the future-work.
+
+\subsection{Loss and Metric}
+
+In modern AI terminology, I chose to train the "logits" instead of class probabilities (in this case the full range [-inf, +inf] is available).
+Having this outputs, the most common loss for multi-class classification is \href{https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html}{cross-entropy-loss}.
+Another option would be to use Softmax layer at the output and then use the plain negative log likelihood loss, this I leave for the reader to examine.
+
+As a metric I used the plain accuracy. Accuracy is often misleading, because the classes are usually imbalanced, and also we often care more about certain types of metric.
+For example in terms of disease detection the \href{https://en.wikipedia.org/wiki/Confusion_matrix}{True Positive Rate}
+may be more important as we are careful to not misdetect an ill patient.
+However in this case, all categories are balanced and equally important, so the plain accuracy is the metric.
+
+\section{Model Architectures}
+
+There will be two competing architectures. One with the vanila RNN layers and the second with LSTM cells.
+It was already shown that LSTM architectures have advantage over vanilla RNNs when the sequences get longer.
+However the sequences of MFCCs are between 
+
+\subsection{Hyper-parameters}
+
+In this work I will experiment with
+
+\begin{itemize}
+  \item Number of neurons
+  \item Number of layers 
+  \item Optimizer
+  \item Learning rate
+  \item Weight decay
+  \item Dropout
+  \item Number of epochs
+\end{itemize}
+
+while not experimenting with
+
+\begin{itemize}
+  \item Batch size
+  \item Batch normalization
+  \item Activation functions
+\end{itemize}
+
+\section{Results}
+
+I started with a baseline architecture - only one recurrent layer (RNN/LSTM), last output from the recurrent layer is the output of the network.
+First optimizer is Adam with learning rate of $0.001$ without any weight decay.
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=6cm]{figures/rnn--l-1--e-5000.png}
+            \includegraphics[width=6cm]{figures/lstm-l-1--e-5000.png}
+      \end{center}
+      \caption{RNN on the left, LSTM on the right (be careful about y-axis values).}
+      \label{fig1}
+\end{figure}
+
+This was a little bit unfair to the model with RNN, as the LSTM had more parameters to learn.
+So I added one fully connected layer at the end, and increased the number of RNN's hidden parameters, so the total number of parameters of the two models is roughly equal.
+The model with one LSTM layer (with 10 hidden neurons) and one linear layer had 1110 parameters in total.
+To match this, the model with one RNN layer had 23 hidden neurons and in total had 1114 learnable parameters.
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=6cm]{figures/RNN--r-1--l-1--p-1114--e-500.png}
+            \includegraphics[width=6cm]{figures/LSTM--r-1--l-1--p-1110--e-500.png}
+      \end{center}
+      \caption{RNN on the left, LSTM on the right (be careful about y-axis values).}
+      \label{fig2}
+\end{figure}
+
+Both models suffered from over-fitting early on. It is visible from the uptrend of validation loss from about 50th epoch, see Figure \ref{fig2}.
+
+\subsection{Over-fitting}
+
+In order to counteract the over-fitting I added one dropout layer between the recurrent and liner layers.
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=6cm]{figures/RNN--r-1--d-0.2--l-1--p-1114--e-500.png}
+            \includegraphics[width=6cm]{figures/LSTM--r-1--d-0.2--l-1--p-1110--e-500.png}
+            \includegraphics[width=6cm]{figures/RNN--r-1--d-0.5--l-1--p-1114--e-1000.png}
+            \includegraphics[width=6cm]{figures/LSTM--r-1--d-0.5--l-1--p-1110--e-1000.png}
+      \end{center}
+      \caption{RNN on the left, LSTM on the right (be careful about y-axis values).}
+      \label{fig3}
+\end{figure}
+
+The dropout helped, the RNN model worked better with 0.5 dropout probability, the LSTM model with the 0.2 probability.
+Also when we compare Figure \ref{fig2} with Figure \ref{fig3} the validation loss increases less, and the validation accuracy declines less with dropout throughout the charts.
+
+However the models still suffered from over-fitting a lot. This was the time for different optimizations.
+
+\subsection{Optimization}
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=6cm]{figures/rnn--rec-1--dp-0--lin-1--par-1114--opt-sgd--lr-0.1--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-1--dp-0--lin-1--par-1110--opt-sgd--lr-0.1--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-1--dp-0--lin-1--par-1114--opt-sgd--lr-0.05--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-1--dp-0--lin-1--par-1110--opt-sgd--lr-0.05--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-1--dp-0--lin-1--par-1114--opt-sgd--lr-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-1--dp-0--lin-1--par-1110--opt-sgd--lr-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-1--dp-0--lin-1--par-1114--opt-sgd--lr-0.001--e-3000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-1--dp-0--lin-1--par-1110--opt-sgd--lr-0.001--e-3000.png}
+      \end{center}
+      \caption{Stochastic Gradient Descent with different learning rates, RNN on the left, LSTM on the right (be careful about both axes values).}
+      \label{fig4}
+\end{figure}
+
+SGD didn't come out as a good fit for RNN model. On the other hand a little surprise was the not bad results from LSTM model with bigger learning rates.
+Especially for the learning rate $0.05$ the validation accuracy was stable around $0.4$, with a peak of $0.551$, which didn't look as an outlier.
+
+Then I tried optimization with weight regularization (or weight decay).
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=6cm]{figures/rnn--rec-1--dp-0--lin-1--par-1114--opt-sgd--lr-0.001--wd-0.01--e-2000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-1--dp-0--lin-1--par-1110--opt-sgd--lr-0.001--wd-0.01--e-2000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-1--dp-0--lin-1--par-1114--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-1--dp-0--lin-1--par-1110--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-1--dp-0--lin-1--par-1114--opt-adamw--lr-0.001--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-1--dp-0--lin-1--par-1110--opt-adamw--lr-0.001--e-1000.png}
+      \end{center}
+      \caption{SGD, Adam and AdamW with a weight decay of $0.05$, RNN on the left, LSTM on the right (be careful about both axes values).}
+      \label{fig5}
+\end{figure}
+
+The weight decay had big impact on the results. Adam with learning rate of $0.001$ and weight decay $0.01$ stopped the over-fitting for both RNN and LSTM models and also scored the best accuracies for both train and validation sets.
+
+\subsection{Increasing Capacity of the Models}
+
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=6cm]{figures/rnn--rec-2--dp-0--lin-1--par-2218--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-2--dp-0--lin-1--par-1990--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-3--dp-0--lin-1--par-3322--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-3--dp-0--lin-1--par-2870--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-4--dp-0--lin-1--par-4426--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-4--dp-0--lin-1--par-3750--opt-adam--lr-0.001--wd-0.01--e-500.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-5--dp-0--lin-1--par-5530--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-5--dp-0--lin-1--par-4630--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+      \end{center}
+      \caption{Adding more layers, RNN on the left, LSTM on the right (be careful about both axes values).}
+      \label{fig6}
+\end{figure}
+
+Figure \ref{fig6} shows us, that for both RNN and LSTM models two recurrent layers are better than one, and also better than having more of them.
+Following charts shows the impact of increasing the size of hidden layers.
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=6cm]{figures/rnn--rec-2--dp-0--lin-1--par-14026--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-2--dp-0--lin-1--par-14794--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-2--dp-0--lin-1--par-52618--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-2--dp-0--lin-1--par-54154--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+      \end{center}
+      \caption{Adding more neurons, RNN on the left, LSTM on the right (be careful about both axes values).}
+      \label{fig7}
+\end{figure}
+
+The increase in number of hidden neurons (to 64 for RNN and 32 for LSTM) significantly improved the accuracy. Another doubling didn't help anymore.
+At this point the validation results showed another signs of over-fitting (the 100\% train accuracy isn't something I was aiming for).
+
+This was the time for a second regularization.
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=6cm]{figures/rnn--rec-2--dp-0.2--lin-1--par-14026--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-2--dp-0.2--lin-1--par-14794--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-2--dp-0.5--lin-1--par-14026--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-2--dp-0.5--lin-1--par-14794--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-2--dp-0--lin-1--par-14026--opt-adam--lr-0.001--wd-0.05--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-2--dp-0--lin-1--par-14794--opt-adam--lr-0.001--wd-0.05--e-1000.png}
+            \includegraphics[width=6cm]{figures/rnn--rec-2--dp-0--lin-1--par-14026--opt-adam--lr-0.001--wd-0.1--e-1000.png}
+            \includegraphics[width=6cm]{figures/lstm--rec-2--dp-0--lin-1--par-14794--opt-adam--lr-0.001--wd-0.1--e-1000.png}
+      \end{center}
+      \caption{Increasing dropout probabilities and weight decays}
+      \label{fig8}
+\end{figure}
+
+The model in top left corner of \ref{fig8} looked like my final candidate.
+Then while trying to reproduce the original accuracies I added one more hidden layer with drop out and GELU activation functions in between.
+Follows the final model overview.
+
+\begin{figure}[H]
+    \begin{verbatim}
+    RNN(
+      (rnn): RNN(13, 64, num_layers=2, batch_first=True, dropout=0.2)
+      (gelu1): GELU(approximate='none')
+      (drop1): Dropout(p=0.2, inplace=False)
+      (fc1): Linear(in_features=64, out_features=32, bias=True)
+      (gelu): GELU(approximate='none')
+      (drop): Dropout(p=0.2, inplace=False)
+      (fc): Linear(in_features=32, out_features=10, bias=True)
+    )
+    \end{verbatim}
+    \caption{Final Model Architecture.}
+    \label{fig8}
+\end{figure}
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=10cm]{figures/final--rnn--rec-2--dp-0.2--lin-2--par-15786--opt-adam--lr-0.001--wd-0.01.png}
+      \end{center}
+      \caption{Training the final model on English dataset.}
+      \label{fig9}
+\end{figure}
+
+As you can see, the final model didn't score as high as the previous versions.
+Because the purpose of this sections was not to score the highest number but to choose the best architecture for the task I believed this architecture is a good shot.
+The result on the test set was 
+
+\textbf{Test Loss} of $0.0211$ \textbf{test accuracy} $0.808$.
+
+\subsection{Classification of Arabic Spoken Digits}
+
+I trained the "Final model" on the Arabic digits dataset.
+
+\begin{figure}[H]
+      \begin{center}
+            \includegraphics[width=10cm]{figures/arabic--rnn--rec-2--dp-0.2--lin-1--par-15786--opt-adam--lr-0.001--wd-0.01--e-1000.png}
+      \end{center}
+      \caption{Training the final model on Arabic dataset.}
+      \label{fig10}
+\end{figure}
+
+The final model was taken as the one with the best validation accuracy.
+
+It's performance on the test set was:
+
+\textbf{Test Loss} of $0.00985$ \textbf{test accuracy} $0.918$.
+
+\section{Conclusions}
+
+In conclusion, the same architecture chosen to classify well English spoken digits worked even better with Arabic spoken digits.
+One explanation why the performance with Arabic was better, might be, the Arabic sounds were sampled with higher rate (11,025Hz vs 8,000Hz).
+Also the Arabic dataset was much more diversified (88 speakers vs 6 speakers).
+Interesting take away is, the models with LSTM didn't over-perform the model with vanilla RNN.
+I believe the biggest reason was the preprocessing to MFCC features.
+The raw sound values would probably fit better the LSTM capabilities.
+This should be examined in a further research.
+The single best improvement identified was using the weight decay for optimization.
+
+\end{document}
